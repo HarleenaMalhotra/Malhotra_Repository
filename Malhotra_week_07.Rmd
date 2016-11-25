@@ -35,7 +35,7 @@ and store it in a data directory in your project repo. (You can read about the d
 
 ```{r, warning=FALSE}
 ## Import maternal mortality data
-MMData <- read_csv("/Users/Harleena/Documents/MSDS/FALL 2016/Data Wrangling and Husbandry/xmart.csv")
+MMData <- read_csv("xmart.csv")
 head(MMData)
 glimpse(MMData)
 summary(MMData)
@@ -89,7 +89,7 @@ MMData$BirthsAttended <- as.numeric(MMData$BirthsAttended)
 
 ```{r, warning=FALSE}
 ## Import income data
-IncomeData <- read_csv("/Users/Harleena/Documents/MSDS/FALL 2016/Data Wrangling and Husbandry/IncomeData.csv", skip = 1)
+IncomeData <- read_csv("IncomeData.csv", skip = 1)
 head(IncomeData)
 glimpse(IncomeData)
 summary(IncomeData)
