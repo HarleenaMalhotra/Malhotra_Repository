@@ -1,0 +1,220 @@
+---
+title: "Malhotra_week_07"
+author: "Harleena Malhotra"
+date: "11/19/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(rvest)
+library(RColorBrewer)
+library(ggthemes)
+library(xkcd)
+library(extrafont)
+library(viridis)
+library(choroplethr)
+library(choroplethrMaps)
+library(countrycode)
+```
+
+##Problem 1
+
+For the following problem, please create a GitHub repository. Submit the assignment by pasting, into the Sakai submission window, the GitHub url to clone your repo. That is all you will submit.
+
+##Part 1:
+
+Download the csv file on maternal mortality at http://apps.who.int/gho/athena/data/xmart.csv?target=GHO/MDG_0000000025,MDG_0000000026&profile=crosstable&filter=COUNTRY:*;YEAR:*&x-sideaxis=COUNTRY;YEAR&x-topaxis=GHO
+and store it in a data directory in your project repo. (You can read about the data  at http://apps.who.int/gho/data/view.main.SDG31v?lang=en )
+
+```{r, warning=FALSE}
+## Import maternal mortality data
+MMData <- read_csv("data/xmart.csv")
+head(MMData)
+glimpse(MMData)
+summary(MMData)
+```
+
+##Part 2:
+
+Although the data is tidy, it needs cleaning. Notice that spaces are used instead of commas in numbers. Turn the numbers for maternal mortality inside square brackets into two new variables, lower_bound and upper_bound.
+
+```{r, warning=FALSE}
+## Rename columns
+colnames(MMData) <- c("Country", "Year", "MortalityRatio", "BirthsAttended")
+
+## Getting rid of spaces in between numbers (where they should have commas)
+MMData$MortalityRatio <- str_replace_all(MMData$MortalityRatio, " ", "")
+
+## Creating column for upper bound and lower bound
+MMData$lower_bound <- ""
+MMData$upper_bound <- ""
+
+i<-1
+while(i<=nrow(MMData)){
+  
+  MMData[i,]$lower_bound <- str_extract(MMData[i,][, "MortalityRatio"], "\\[[0-9]+\\-") %>% str_replace_all("\\[", "") %>% 
+    str_replace_all("-", "")
+ 
+  MMData[i,]$upper_bound <- str_extract(MMData[i,][, "MortalityRatio"], "-[0-9]+\\]") %>% str_replace_all("\\]", "") %>% 
+    str_replace_all("-", "")
+  
+  MMData[i,]$MortalityRatio <- substr(MMData[i,]$MortalityRatio, 1, str_locate(MMData[i,]$MortalityRatio, "\\[") -1)
+  
+  ## Tidying year column
+  if(grepl("-", MMData[i,]$Year)) {
+     MMData <- rbind(MMData, c(MMData[i, ]$Country, substr(MMData[i,]$Year, 1,4), MMData[i, ]$MortalityRatio, MMData[i,]$BirthsAttended, MMData[i,]$upper_bound, MMData[i,]$lower_bound))
+    MMData[i,]$Year <- substr(MMData[i,]$Year, 6,9)
+  }
+
+i<-i+1
+}
+
+MMData$upper_bound <- as.integer(MMData$upper_bound)
+MMData$lower_bound <- as.integer(MMData$lower_bound)
+MMData$MortalityRatio <- as.integer(MMData$MortalityRatio)
+MMData$Year <- as.integer(MMData$Year)
+MMData$BirthsAttended <- as.numeric(MMData$BirthsAttended)
+```
+
+##Part 3:
+
+- Download the gross national income data from http://apps.who.int/gho/data/node.main.GNI107?lang=en (Download the complete data as a "CVS table", storing it in the data folder).
+
+```{r, warning=FALSE}
+## Import income data
+IncomeData <- read_csv("data/IncomeData.csv", skip = 1)
+head(IncomeData)
+glimpse(IncomeData)
+summary(IncomeData)
+```
+
+##Part 4:
+
+Tidy this data, so that there is one entry per country per year
+
+```{r, warning=FALSE}
+##Wide to long
+LongIncomeData <- gather(IncomeData, "Year", "Gross national income per capita", 2:25)
+LongIncomeData$`Gross national income per capita` <- as.integer(str_replace_all(LongIncomeData$`Gross national income per capita`, " ", ""))
+LongIncomeData$Year <- as.integer(LongIncomeData$Year)
+
+```
+
+##Part 5:
+
+Merge the two files by country and year, retaining only rows for which you have per capita income and either maternal mortality or percentage attended births
+
+```{r, warning=FALSE}
+## Removing rows from the income data frame that have NA values for the gross income per capita column
+NewIncomeDat <- na.omit(LongIncomeData)
+
+## Merging the two files by country and year
+FinalDF <- inner_join(MMData, NewIncomeDat, by = c("Country" = "Country", "Year" = "Year"))
+```
+
+##Part 6:
+
+Make two polished and informative graphs, one relating income to maternal mortality and the other relating income to percentage attended births
+
+```{r, warning=FALSE}
+colnames(FinalDF)[7] <- "GrossIncome"
+
+ggplot() + geom_point(data = FinalDF, mapping = aes(GrossIncome, MortalityRatio)) + geom_smooth(data = FinalDF, mapping = aes(GrossIncome, MortalityRatio), se = FALSE) + ggtitle("Income vs Materal Mortality") + xlab("Income") + ylab("Maternal Mortality")
+
+## According to this graph, the blue line shows a clear connection between income and mortality rate. The lower the income, the higher the mortality rate. As the income increases, the mortality rate greatly decreases. inversely proportional
+
+
+ggplot() + geom_point(data = FinalDF, mapping = aes( BirthsAttended, GrossIncome)) + geom_smooth(data = FinalDF, mapping = aes( BirthsAttended, GrossIncome), se = FALSE) + ggtitle("Income vs Percentage Attended Births") + xlab("Income") + ylab("Percentage Births Attended")
+   
+## According to this graph, after a certain income, the percentage births attended increases as the income increases. The births attended is directly proportional                                                                                               
+```
+
+##Part 7:
+
+Save a csv file with the merged, cleaned, and tidy data, using a suitable name of your choosing in the data folder.
+
+```{r, warning=FALSE}
+write_csv(FinalDF, "/Users/Harleena/Documents/MSDS/FALL 2016/Data Wrangling and Husbandry/FinalDF.csv", na = "NA", append = FALSE)
+```
+
+
+##Part 8:
+
+Use the country_choropleth() function in the choroplethr package to make a world map of maternal mortality, using the most recent year for each country in the merged dataset you created. The defaults of the function will be fine; no need to tune up the plot. You can read the help file to see how the data must be formatted; you may need to rename the countries from the dataset that you've created.
+
+```{r, warning=FALSE}
+## To get the most recent year for each country in the merged dataset
+FinalDFSort <- FinalDF %>%
+  arrange(Country, desc(Year))
+
+library(plyr)
+FinalDF2 <- ddply(.data = FinalDFSort, .var = c("Country"), .fun = function(x) x[1,])
+library(dplyr)
+
+
+## To make world map of maternal mortality 
+colnames(FinalDF2)[1] <- "region"
+colnames(FinalDF2)[3] <- "value"
+FinalDF2$region <- tolower(FinalDF2$region) 
+
+
+## Renaming Countries
+i <- 1
+while(i <= nrow(FinalDF2))
+{
+  if(FinalDF2[i,]$region == "bahamas") FinalDF2[i,]$region <- "the bahamas"
+  if(FinalDF2[i,]$region == "bolivia (plurinational state of)") FinalDF2[i,]$region <-  "bolivia"
+  if(FinalDF2[i,]$region == "brunei darussalam") FinalDF2[i,]$region <-  "brunei"
+  if(FinalDF2[i,]$region == "congo") FinalDF2[i,]$region <-  "republic of congo"
+  if(FinalDF2[i,]$region == "cote d'ivoire") FinalDF2[i,]$region <- "ivory coast"
+  if(FinalDF2[i,]$region == "guinea-bissau") FinalDF2[i,]$region <- "guinea bissau"
+  if(FinalDF2[i,]$region == "iran (islamic republic of)") FinalDF2[i,]$region <- "iran"
+  if(FinalDF2[i,]$region == "lao people's democratic republic") FinalDF2[i,]$region <- "laos"
+  if(FinalDF2[i,]$region == "republic of korea") FinalDF2[i,]$region <- "south korea"
+  if(FinalDF2[i,]$region == "republic of moldova") FinalDF2[i,]$region <- "moldova"
+  if(FinalDF2[i,]$region == "russian federation") FinalDF2[i,]$region <- "russia"
+  if(FinalDF2[i,]$region == "serbia") FinalDF2[i,]$region <- "republic of serbia"
+  if(FinalDF2[i,]$region == "the former yugoslav republic of macedonia") FinalDF2[i,]$region <- "macedonia"
+  if(FinalDF2[i,]$region == "timor-leste") FinalDF2[i,]$region <- "east timor"
+  if(FinalDF2[i,]$region == "united kingdom of great britain and northern ireland") FinalDF2[i,]$region <- "united kingdom"
+  if(FinalDF2[i,]$region == "venezuela (bolivarian republic of)") FinalDF2[i,]$region <- "venezuela"
+  if(FinalDF2[i,]$region == "viet nam") FinalDF2[i,]$region <- "vietnam"
+  i <- i+1
+}
+
+## Countries missing from the choroplethr country list:
+##bahrain
+##barbados
+##cabo verde
+##comoros
+##grenada
+##kiribati
+##maldives
+##malta
+##marshall islands
+##mauritius
+##micronesia (federated states of)
+##saint lucia
+##saint vincent and the grenadines
+##samoa
+##seychelles
+##singapore
+##tonga
+##tuvalu
+
+mmMap <- country_choropleth(FinalDF2, title = "World Map of Maternal Mortality", num_colors = 1)
+mmMap
+
+```
+
+
+##Part 9:
+
+All of your steps, other than downloading the files, should be contained in a single R Markdown file that will run in the repo directory. Be sure to describe your steps
