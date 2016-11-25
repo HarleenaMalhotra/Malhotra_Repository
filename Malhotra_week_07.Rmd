@@ -101,6 +101,7 @@ Tidy this data, so that there is one entry per country per year
 
 ```{r, warning=FALSE}
 ##Wide to long
+## Testing commit
 LongIncomeData <- gather(IncomeData, "Year", "Gross national income per capita", 2:25)
 LongIncomeData$`Gross national income per capita` <- as.integer(str_replace_all(LongIncomeData$`Gross national income per capita`, " ", ""))
 LongIncomeData$Year <- as.integer(LongIncomeData$Year)
