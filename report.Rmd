@@ -11,10 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(readr)
-MHData <- read_csv("data/MaternalHealthData.csv", col_names = FALSE)
+MHData <- read_csv("data/MaternalHealthData.csv", col_names = FALSE, skip = 2)
+colnames(MHData) <- c("region", "MaternalAge2015", "MaternalAge2013", "MaternalAge2012")
 ```
 
 ```{r}
-
+source("Malhotra-functions.R")
+Func_Result <- fix_who_column(MHData$MaternalAge2015)
 ```
 
