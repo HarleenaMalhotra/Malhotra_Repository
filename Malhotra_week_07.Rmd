@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+First, we must import all the necessary libraries.
 ```{r, warning=FALSE}
 library(tidyverse)
 library(stringr)
@@ -24,26 +25,18 @@ library(choroplethrMaps)
 library(countrycode)
 ```
 
-##Problem 1
-
-For the following problem, please create a GitHub repository. Submit the assignment by pasting, into the Sakai submission window, the GitHub url to clone your repo. That is all you will submit.
-
-##Part 1:
-
-Download the csv file on maternal mortality at http://apps.who.int/gho/athena/data/xmart.csv?target=GHO/MDG_0000000025,MDG_0000000026&profile=crosstable&filter=COUNTRY:*;YEAR:*&x-sideaxis=COUNTRY;YEAR&x-topaxis=GHO
-and store it in a data directory in your project repo. (You can read about the data  at http://apps.who.int/gho/data/view.main.SDG31v?lang=en )
+##Step 1:
+I imported the csv file on maternal mortality and observed the data. 
 
 ```{r, warning=FALSE}
-## Import maternal mortality data
 MMData <- read_csv("data/xmart.csv")
 head(MMData)
 glimpse(MMData)
 summary(MMData)
 ```
 
-##Part 2:
-
-Although the data is tidy, it needs cleaning. Notice that spaces are used instead of commas in numbers. Turn the numbers for maternal mortality inside square brackets into two new variables, lower_bound and upper_bound.
+##Step 2:
+I tidied the maternal mortality data by renaming the columns, removing any extra spaces/characters, and creating upper bound and lower bound columns. 
 
 ```{r, warning=FALSE}
 ## Rename columns
@@ -52,7 +45,7 @@ colnames(MMData) <- c("Country", "Year", "MortalityRatio", "BirthsAttended")
 ## Getting rid of spaces in between numbers (where they should have commas)
 MMData$MortalityRatio <- str_replace_all(MMData$MortalityRatio, " ", "")
 
-## Creating column for upper bound and lower bound
+## Creating lower bound and upper bound columns
 MMData$lower_bound <- ""
 MMData$upper_bound <- ""
 
@@ -76,6 +69,7 @@ while(i<=nrow(MMData)){
 i<-i+1
 }
 
+## Changing some of the columns to type integer or numeric. 
 MMData$upper_bound <- as.integer(MMData$upper_bound)
 MMData$lower_bound <- as.integer(MMData$lower_bound)
 MMData$MortalityRatio <- as.integer(MMData$MortalityRatio)
@@ -83,9 +77,8 @@ MMData$Year <- as.integer(MMData$Year)
 MMData$BirthsAttended <- as.numeric(MMData$BirthsAttended)
 ```
 
-##Part 3:
-
-- Download the gross national income data from http://apps.who.int/gho/data/node.main.GNI107?lang=en (Download the complete data as a "CVS table", storing it in the data folder).
+##Step 3:
+I imported the csv file on gross national income and observed the data.
 
 ```{r, warning=FALSE}
 ## Import income data
@@ -95,22 +88,19 @@ glimpse(IncomeData)
 summary(IncomeData)
 ```
 
-##Part 4:
-
-Tidy this data, so that there is one entry per country per year
+##Step 4:
+I tidied the data so that there was only one entry per country per year. 
 
 ```{r, warning=FALSE}
-##Wide to long
-## Testing commit
+## Wide to long
 LongIncomeData <- gather(IncomeData, "Year", "Gross national income per capita", 2:25)
 LongIncomeData$`Gross national income per capita` <- as.integer(str_replace_all(LongIncomeData$`Gross national income per capita`, " ", ""))
 LongIncomeData$Year <- as.integer(LongIncomeData$Year)
 
 ```
 
-##Part 5:
-
-Merge the two files by country and year, retaining only rows for which you have per capita income and either maternal mortality or percentage attended births
+##Step 5:
+I merged the two files by country and year, retaining only rows for which I had per capita income and either maternal mortality or percentage attended births.
 
 ```{r, warning=FALSE}
 ## Removing rows from the income data frame that have NA values for the gross income per capita column
@@ -120,53 +110,49 @@ NewIncomeDat <- na.omit(LongIncomeData)
 FinalDF <- inner_join(MMData, NewIncomeDat, by = c("Country" = "Country", "Year" = "Year"))
 ```
 
-##Part 6:
-
-Make two polished and informative graphs, one relating income to maternal mortality and the other relating income to percentage attended births
+##Step 6:
+I made two graphs, one relating income to maternal mortality and the other relating income to percentage attended births.
 
 ```{r, warning=FALSE}
+## Changing column name for convenience 
 colnames(FinalDF)[7] <- "GrossIncome"
 
+## Graph 1:
 ggplot() + geom_point(data = FinalDF, mapping = aes(GrossIncome, MortalityRatio)) + geom_smooth(data = FinalDF, mapping = aes(GrossIncome, MortalityRatio), se = FALSE) + ggtitle("Income vs Materal Mortality") + xlab("Income") + ylab("Maternal Mortality")
+## According to this graph, the blue line shows a clear connection between income and mortality rate. The lower the income, the higher the mortality rate. As the income increases, the mortality rate greatly decreases. Therefore, income and maternal mortality are inversely proportional. 
 
-## According to this graph, the blue line shows a clear connection between income and mortality rate. The lower the income, the higher the mortality rate. As the income increases, the mortality rate greatly decreases. inversely proportional
-
-
+##Graph 2:
 ggplot() + geom_point(data = FinalDF, mapping = aes( BirthsAttended, GrossIncome)) + geom_smooth(data = FinalDF, mapping = aes( BirthsAttended, GrossIncome), se = FALSE) + ggtitle("Income vs Percentage Attended Births") + xlab("Income") + ylab("Percentage Births Attended")
-   
-## According to this graph, after a certain income, the percentage births attended increases as the income increases. The births attended is directly proportional                                                                                               
+## According to this graph, the percentage births attended increases as the income increases. Therefore, income and percentage births attended are directly proportional.                                                                                               
 ```
 
-##Part 7:
-
-Save a csv file with the merged, cleaned, and tidy data, using a suitable name of your choosing in the data folder.
+##Step 7:
+I saved a csv file of the FinalDF created in Step 5.
 
 ```{r, warning=FALSE}
+## Creating csv file
 write_csv(FinalDF, "/Users/Harleena/Documents/MSDS/FALL 2016/Data Wrangling and Husbandry/FinalDF.csv", na = "NA", append = FALSE)
 ```
 
-
 ##Part 8:
-
-Use the country_choropleth() function in the choroplethr package to make a world map of maternal mortality, using the most recent year for each country in the merged dataset you created. The defaults of the function will be fine; no need to tune up the plot. You can read the help file to see how the data must be formatted; you may need to rename the countries from the dataset that you've created.
+Using the FinalDF created in Step 5, I made a world map of maternal mortality, where the most recent year was used for each country. 
 
 ```{r, warning=FALSE}
-## To get the most recent year for each country in the merged dataset
+## Getting the most recent year for each country from FinalDF
 FinalDFSort <- FinalDF %>%
   arrange(Country, desc(Year))
-
 library(plyr)
 FinalDF2 <- ddply(.data = FinalDFSort, .var = c("Country"), .fun = function(x) x[1,])
 library(dplyr)
 
-
-## To make world map of maternal mortality 
+## Renaming the columns before creating the map 
 colnames(FinalDF2)[1] <- "region"
 colnames(FinalDF2)[3] <- "value"
-FinalDF2$region <- tolower(FinalDF2$region) 
 
+## Changing the country names to lower case for convenience
+FinalDF2$region <- tolower(FinalDF2$region)  
 
-## Renaming Countries
+## Renaming countries so they match the names in the choropleth country list
 i <- 1
 while(i <= nrow(FinalDF2))
 {
@@ -190,7 +176,7 @@ while(i <= nrow(FinalDF2))
   i <- i+1
 }
 
-## Countries missing from the choroplethr country list:
+## Countries that are in FinalDF2, but are missing from the choroplethr country list:
 ##bahrain
 ##barbados
 ##cabo verde
@@ -210,12 +196,9 @@ while(i <= nrow(FinalDF2))
 ##tonga
 ##tuvalu
 
+## Creating the maternal mortality map
 mmMap <- country_choropleth(FinalDF2, title = "World Map of Maternal Mortality", num_colors = 1)
 mmMap
 
 ```
 
-
-##Part 9:
-
-All of your steps, other than downloading the files, should be contained in a single R Markdown file that will run in the repo directory. Be sure to describe your steps
