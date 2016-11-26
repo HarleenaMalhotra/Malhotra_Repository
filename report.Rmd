@@ -1,0 +1,20 @@
+---
+title: "report"
+author: "Harleena Malhotra"
+date: "November 25, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+MHData <- read_csv("data/MaternalHealthData.csv", col_names = FALSE)
+```
+
+```{r}
+
+```
+
